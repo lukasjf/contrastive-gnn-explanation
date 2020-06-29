@@ -96,23 +96,27 @@ def trisq():
 
 def cycliq(is_multi):
     all_graphs = []
+    label = 0
     if is_multi:
         random.seed(0)
         for i in range(1000):
             g = random_tree(random.randint(8, 15))
-            add_to_list(all_graphs, g, 0)
+            add_to_list(all_graphs, g, label)
+        label += 1
     random.seed(1)
     for i in range(1000):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 2)
         attach_cycles(g, cycle_len=5, count=count)
-        add_to_list(all_graphs, g, 1)
+        add_to_list(all_graphs, g, label)
+    label += 1
     random.seed(2)
     for i in range(1000):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 2)
         attach_cycles(g, cycle_len=5, count=count, is_clique=True)
-        add_to_list(all_graphs, g, 2)
+        add_to_list(all_graphs, g, label)
+    label += 1
     if is_multi:
         random.seed(3)
         for i in range(1000):
@@ -121,7 +125,7 @@ def cycliq(is_multi):
             attach_cycles(g, cycle_len=5, count=count, is_clique=True)
             count = random.randint(1, 2)
             attach_cycles(g, cycle_len=5, count=count)
-            add_to_list(all_graphs, g, 3)
+            add_to_list(all_graphs, g, label)
     return all_graphs
 
 
@@ -130,7 +134,7 @@ def write_gexf(output_path: Path, dataset: Dataset, graphs):
     path.mkdir(exist_ok=True)
     print('Created .gexf files in %s' % path)
     for g, label in graphs:
-        nx.write_gexf(g, path / ('%d.gexf' % g.graph['graph_num']))
+        nx.write_gexf(g, path / ('%d.%d.gexf' % (g.graph['graph_num'], label)))
 
 
 def write_adjacency(output_path: Path, dataset: Dataset, graphs):
