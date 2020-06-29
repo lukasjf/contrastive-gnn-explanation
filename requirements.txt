@@ -1,0 +1,9 @@
+click==7.1.2
+decorator==4.4.2
+future==0.18.2
+geomloss==0.2.3
+networkx==2.4
+numpy==1.19.0
+torch==1.5.1
+tqdm==4.46.1
+typer==0.3.0
