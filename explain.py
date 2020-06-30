@@ -51,8 +51,9 @@ def read_graphs(dataset_path: Path):
     nx_graphs = {}
     for name in os.listdir(str(dataset_path)):
         idx, label = name.split('.')[-3:-1]
+        idx, label = int(idx), int(label)
         nx_graphs[idx] = nx.read_gexf(dataset_path / name)
-        labels[idx] = int(label)
+        labels[idx] = label
     print('Found %d samples' % len(nx_graphs))
     return nx_graphs, labels
 

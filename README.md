@@ -13,7 +13,7 @@ pip install -r requirements.txt
 python gen_dataset.py
 ```
 
-##Training a GNN model
+## Training a GNN model
 We use GNNExplainer source code for training the model and generating the explanation.
  
 ## Explaining the model
@@ -22,3 +22,6 @@ You can run different explanation method via `explain.py` script
 python explain.py sensitivity | occlusion | random
 ```
 ## Evaluation
+```shell
+python evaluate.py
+```
