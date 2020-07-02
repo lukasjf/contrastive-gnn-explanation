@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -11,8 +12,17 @@ def main(dataset_path: Path, explain_path: Path):
     nx_graphs, labels = read_graphs(dataset_path)
 
     graph_masked_adjs = {}
+
+    name_map = {}
+    for name in os.listdir(str(explain_path)):
+        if not name.endswith('npy'):
+            continue
+        name_map[name.split('.')[0]] = name
+
     for i in nx_graphs:
-        masked_adj = np.load(str(explain_path / str(i)) + '.npy')
+        if str(i) not in name_map:
+            continue
+        masked_adj = np.load(str(explain_path / name_map[str(i)]))
         last_idx = len(nx_graphs[i].nodes)
         masked_adj = masked_adj[:last_idx, :last_idx]
         graph_masked_adjs[i] = masked_adj
@@ -49,6 +59,8 @@ def main(dataset_path: Path, explain_path: Path):
     accs = []
     accs_by_label = defaultdict(list)
     for idx in nx_graphs:
+        if str(idx) not in name_map:
+            continue
         correct_edges = get_correct_edges(nx_graphs[idx])
         if len(correct_edges) == 0:
             continue
@@ -66,4 +78,6 @@ def main(dataset_path: Path, explain_path: Path):
 
 
 if __name__ == '__main__':
-    typer.run(main)
+    app = typer.Typer(add_completion=False)
+    app.command()(main)
+    app()

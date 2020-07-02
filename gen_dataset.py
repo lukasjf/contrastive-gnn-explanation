@@ -11,6 +11,7 @@ class Dataset(str, Enum):
     CYCLIQ = 'CYCLIQ'
     CYCLIQ_MULTI = 'CYCLIQ-MULTI'
     TRISQ = 'TRISQ'
+    HOUSE_CLIQ = 'HOUSE_CLIQ'
 
 
 def random_tree(n):
@@ -51,6 +52,39 @@ def attach_cycle(g, cycle_len, label, is_clique):
     return g
 
 
+def attach_house(g, label):
+    N = len(g.nodes())
+    host_cands = [k for k, v in g.nodes(data=True) if v['label'] == 0]
+    host_node = random.choice(host_cands)
+    neighbors = list(g.neighbors(host_node))
+    for u in neighbors:
+        g.remove_edge(u, host_node)
+    #   4
+    #  / \
+    # 2---3
+    # |   |
+    # 0---1
+    house_nodes = [N + 0, N + 1, N + 2, N + 3]
+    # assign which type of node the host node would be
+    house_nodes.insert(random.randint(0, 3), host_node)
+
+    g.add_edge(house_nodes[0], house_nodes[1])
+    g.add_edge(house_nodes[0], house_nodes[2])
+    g.add_edge(house_nodes[1], house_nodes[3])
+    g.add_edge(house_nodes[2], house_nodes[3])
+    g.add_edge(house_nodes[2], house_nodes[4])
+    g.add_edge(house_nodes[3], house_nodes[4])
+
+    for u in house_nodes:
+        g.nodes[u]['label'] = label
+
+    # restore host_node edges
+    for u in neighbors:
+        v = random.choice(house_nodes)
+        g.add_edge(u, v)
+    return g
+
+
 def attach_cycles(g, cycle_len, count, is_clique=False):
     for i in range(count):
         attach_cycle(g, cycle_len, '%d-%d-%d' % (cycle_len, is_clique, i), is_clique)
@@ -65,26 +99,46 @@ def add_to_list(graph_list, g, label):
     graph_list.append((g, label))
 
 
-def trisq():
+def house_cliq(sample_size):
+    all_graphs = []
+    label = 0
+    random.seed(1)
+    for i in range(sample_size):
+        g = random_tree(random.randint(8, 15))
+        count = random.randint(1, 2)
+        for i in range(count):
+            attach_house(g, 'h-%d' % i)
+        add_to_list(all_graphs, g, label)
+    label += 1
+    random.seed(2)
+    for i in range(sample_size):
+        g = random_tree(random.randint(8, 15))
+        count = random.randint(1, 2)
+        attach_cycles(g, cycle_len=5, count=count, is_clique=True)
+        add_to_list(all_graphs, g, label)
+    return all_graphs
+
+
+def trisq(sample_size):
     all_graphs = []
     random.seed(0)
-    for i in range(1000):
+    for i in range(sample_size):
         g = random_tree(random.randint(8, 15))
         add_to_list(all_graphs, g, 0)
     random.seed(1)
-    for i in range(1000):
+    for i in range(sample_size):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 4)
         attach_cycles(g, cycle_len=3, count=count)
         add_to_list(all_graphs, g, 1)
     random.seed(2)
-    for i in range(1000):
+    for i in range(sample_size):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 4)
         attach_cycles(g, cycle_len=4, count=count)
         add_to_list(all_graphs, g, 2)
     random.seed(3)
-    for i in range(1000):
+    for i in range(sample_size):
         g = random_tree(random.randint(8, 15))
         count_tri = random.randint(1, 4)
         count_sq = random.randint(1, 4)
@@ -94,24 +148,24 @@ def trisq():
     return all_graphs
 
 
-def cycliq(is_multi):
+def cycliq(sample_size, is_multi):
     all_graphs = []
     label = 0
     if is_multi:
         random.seed(0)
-        for i in range(1000):
+        for i in range(sample_size):
             g = random_tree(random.randint(8, 15))
             add_to_list(all_graphs, g, label)
         label += 1
     random.seed(1)
-    for i in range(1000):
+    for i in range(sample_size):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 2)
         attach_cycles(g, cycle_len=5, count=count)
         add_to_list(all_graphs, g, label)
     label += 1
     random.seed(2)
-    for i in range(1000):
+    for i in range(sample_size):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 2)
         attach_cycles(g, cycle_len=5, count=count, is_clique=True)
@@ -119,7 +173,7 @@ def cycliq(is_multi):
     label += 1
     if is_multi:
         random.seed(3)
-        for i in range(1000):
+        for i in range(sample_size):
             g = random_tree(random.randint(8, 15))
             count = random.randint(1, 2)
             attach_cycles(g, cycle_len=5, count=count, is_clique=True)
@@ -129,12 +183,10 @@ def cycliq(is_multi):
     return all_graphs
 
 
-def write_gexf(output_path: Path, dataset: Dataset, graphs):
-    path = output_path / dataset.value
-    path.mkdir(exist_ok=True)
-    print('Created .gexf files in %s' % path)
+def write_gexf(output_path: Path, graphs):
+    print('Created .gexf files in %s' % output_path)
     for g, label in graphs:
-        nx.write_gexf(g, path / ('%d.%d.gexf' % (g.graph['graph_num'], label)))
+        nx.write_gexf(g, output_path / ('%d.%d.gexf' % (g.graph['graph_num'], label)))
 
 
 def write_adjacency(output_path: Path, dataset: Dataset, graphs):
@@ -156,22 +208,30 @@ def write_adjacency(output_path: Path, dataset: Dataset, graphs):
         f.write('\n'.join([str(label) for g, label in graphs]))
 
 
-def main(dataset: Dataset, output_path: Path):
+def main(dataset: Dataset, output_path: Path = typer.Argument('data', help='Output path for dataset'),
+         sample_size: int = typer.Option(1000, help='Number of samples for each label to generate')):
     print('Generating %s dataset' % dataset.value)
     if dataset == Dataset.CYCLIQ:
-        graphs = cycliq(is_multi=False)
+        graphs = cycliq(sample_size, is_multi=False)
     elif dataset == Dataset.CYCLIQ_MULTI:
-        graphs = cycliq(is_multi=True)
+        graphs = cycliq(sample_size, is_multi=True)
     elif dataset == Dataset.TRISQ:
-        graphs = trisq()
+        graphs = trisq(sample_size)
+    elif dataset == Dataset.HOUSE_CLIQ:
+        graphs = house_cliq(sample_size)
 
     if not output_path.exists():
-        typer.confirm("Output path does not exist, do you want to create it?", abort=True)
+        typer.confirm("Output path %s does not exist, do you want to create it?" % output_path, abort=True)
         output_path.mkdir()
 
-    write_gexf(output_path, dataset, graphs)
+    output_path = output_path / dataset.value
+    output_path.mkdir(exist_ok=True)
+
+    write_gexf(output_path, graphs)
     write_adjacency(output_path, dataset, graphs)
 
 
 if __name__ == '__main__':
-    typer.run(main)
+    app = typer.Typer(add_completion=False)
+    app.command()(main)
+    app()
