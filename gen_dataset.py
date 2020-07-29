@@ -12,6 +12,8 @@ class Dataset(str, Enum):
     CYCLIQ_MULTI = 'CYCLIQ-MULTI'
     TRISQ = 'TRISQ'
     HOUSE_CLIQ = 'HOUSE_CLIQ'
+    GRID_CLIQ = 'GRID_CLIQ'
+    HOUSE_GRID = "HOUSE_GRID"
 
 
 def random_tree(n):
@@ -51,6 +53,44 @@ def attach_cycle(g, cycle_len, label, is_clique):
         g.add_edge(u, v)
     return g
 
+
+def attach_grid(g, label):
+    N = len(g.nodes())
+    host_cands = [k for k, v in g.nodes(data=True) if v['label'] == 0]
+    host_node = random.choice(host_cands)
+    neighbors = list(g.neighbors(host_node))
+    for u in neighbors:
+        g.remove_edge(u, host_node)
+    # 0 - 1 - 2
+    # |   |   |
+    # 3 - 4 - 5
+    # |   |   |
+    # 6 - 7 - 8
+    grid_nodes = [N + i for i in range(8)]
+    # assign which type of node the host node would be
+    grid_nodes.insert(random.randint(0, len(grid_nodes)), host_node)
+
+    g.add_edge(grid_nodes[0], grid_nodes[1])
+    g.add_edge(grid_nodes[0], grid_nodes[3])
+    g.add_edge(grid_nodes[1], grid_nodes[2])
+    g.add_edge(grid_nodes[1], grid_nodes[4])
+    g.add_edge(grid_nodes[2], grid_nodes[5])
+    g.add_edge(grid_nodes[3], grid_nodes[4])
+    g.add_edge(grid_nodes[3], grid_nodes[6])
+    g.add_edge(grid_nodes[4], grid_nodes[5])
+    g.add_edge(grid_nodes[4], grid_nodes[7])
+    g.add_edge(grid_nodes[5], grid_nodes[8])
+    g.add_edge(grid_nodes[6], grid_nodes[7])
+    g.add_edge(grid_nodes[7], grid_nodes[8])
+
+    for u in grid_nodes:
+        g.nodes[u]['label'] = label
+
+    # restore host_node edges
+    for u in neighbors:
+        v = random.choice(grid_nodes)
+        g.add_edge(u, v)
+    return g
 
 def attach_house(g, label):
     N = len(g.nodes())
@@ -115,6 +155,47 @@ def house_cliq(sample_size):
         g = random_tree(random.randint(8, 15))
         count = random.randint(1, 2)
         attach_cycles(g, cycle_len=5, count=count, is_clique=True)
+        add_to_list(all_graphs, g, label)
+    return all_graphs
+
+
+def grid_cliq(sample_size):
+    all_graphs = []
+    label = 0
+    random.seed(1)
+    for i in range(sample_size):
+        g = random_tree(random.randint(8, 15))
+        count = random.randint(1, 2)
+        for i in range(count):
+            attach_grid(g, 'g-%d' % i)
+        add_to_list(all_graphs, g, label)
+    label += 1
+    random.seed(2)
+    for i in range(sample_size):
+        g = random_tree(random.randint(8, 15))
+        count = random.randint(1, 2)
+        attach_cycles(g, cycle_len=5, count=count, is_clique=True)
+        add_to_list(all_graphs, g, label)
+    return all_graphs
+
+
+def house_grid(sample_size):
+    all_graphs = []
+    label = 0
+    random.seed(1)
+    for i in range(sample_size):
+        g = random_tree(random.randint(8, 15))
+        count = random.randint(1, 2)
+        for i in range(count):
+            attach_grid(g, 'g-%d' % i)
+        add_to_list(all_graphs, g, label)
+    label += 1
+    random.seed(2)
+    for i in range(sample_size):
+        g = random_tree(random.randint(8, 15))
+        count = random.randint(1, 2)
+        for i in range(count):
+            attach_house(g, 'h-%d' % i)
         add_to_list(all_graphs, g, label)
     return all_graphs
 
@@ -219,6 +300,10 @@ def main(dataset: Dataset, output_path: Path = typer.Argument('data', help='Outp
         graphs = trisq(sample_size)
     elif dataset == Dataset.HOUSE_CLIQ:
         graphs = house_cliq(sample_size)
+    elif dataset == Dataset.GRID_CLIQ:
+        graphs = grid_cliq(sample_size)
+    elif dataset == Dataset.HOUSE_GRID:
+        graphs = house_grid(sample_size)
 
     if not output_path.exists():
         typer.confirm("Output path %s does not exist, do you want to create it?" % output_path, abort=True)
