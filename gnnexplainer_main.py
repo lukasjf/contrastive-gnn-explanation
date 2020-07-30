@@ -269,7 +269,7 @@ def main():
         explainer.explain(prog_args.explain_node, unconstrained=False)
     elif graph_mode:
         if prog_args.explain_all:
-            explain_path = Path('explanations/gnnexplainer%s/' % prog_args.bmname)
+            explain_path = Path('explanations/gnnexplainer/')
             explain_path.mkdir(exist_ok=True, parents=True)
             embeddings_path = Path('embeddings-%s/' % prog_args.bmname)
             embeddings_path.mkdir(exist_ok=True, parents=True)
