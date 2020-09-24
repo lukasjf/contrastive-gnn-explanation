@@ -76,3 +76,6 @@ python evaluate.py data/CYCLIQ/ explanations/contrast/
 
 ## Visualizing Explanations
 You can run the `Visualize.ipynb` notebook for visualizing each method explanation
+
+## Qualitative analysis
+For reproducing the qualitative experiments look into the notebooks in the `qualitative` folder.
